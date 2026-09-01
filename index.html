@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini App TCG</title>
+    <!-- Script Oficial de Telegram Mini Apps -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--tg-theme-bg-color, #121212);
+            color: var(--tg-theme-text-color, #ffffff);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .card-box {
+            border: 2px solid #ffd700;
+            border-radius: 16px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            width: 80%;
+            max-width: 300px;
+        }
+        button {
+            background-color: #0088cc;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.2s;
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #ffd700;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card-box">
+        <h2 id="greeting">¡Hola TCG!</h2>
+        <p>Abre tu sobre diario para conseguir cartas de puntos.</p>
+        <button onclick="openPack()">🎴 Abrir Sobre TCG</button>
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Ajusta la Mini App a pantalla completa en Telegram
+
+        // Personalizar saludo con datos reales de Telegram
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            document.getElementById('greeting').innerText = `¡Hola, ${tg.initDataUnsafe.user.first_name}!`;
+        }
+
+        function openPack() {
+            const cards = ["Charizard 1st Edition", "Pikachu Illustrator", "Mewtwo Gold Star", "Blue-Eyes White Dragon"];
+            const prize = cards[Math.floor(Math.random() * cards.length)];
+            
+            document.getElementById('result').innerText = `🎉 ¡Te ha tocado: ${prize}!`;
+            
+            // Vibración háptica en el teléfono al abrir el sobre
+            if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('medium');
+            }
+        }
+    </script>
+</body>
+</html>
