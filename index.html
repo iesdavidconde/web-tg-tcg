@@ -3,114 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sorteos TCG</title>
+    <title>TCG Rewards</title>
+    <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Adsgram SDK -->
+    <script src="https://adsgram.ai/js/adsgram-ad.js"></script>
     <style>
-        body { font-family: sans-serif; background: #121212; color: #fff; text-align: center; padding: 20px; margin: 0; }
-        .card { border: 2px solid #ffd700; border-radius: 12px; padding: 20px; background: #1e1e1e; max-width: 320px; margin: 0 auto; }
-        button { background: #0088cc; color: #fff; border: none; padding: 14px 20px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; width: 100%; }
-        button:disabled { background: #555; cursor: not-allowed; }
-        #video-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); flex-direction: column; justify-content: center; align-items: center; z-index: 1000; }
-        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #ffd700; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 15px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #result-msg { margin-top: 15px; font-weight: bold; color: #ffd700; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #18222d;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .card {
+            background: #212d3b;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            width: 85%;
+            max-width: 320px;
+        }
+        h2 { margin-top: 0; color: #64b5f6; }
+        p { color: #b0bec5; font-size: 14px; }
+        button {
+            background-color: #248bda;
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+        button:disabled { background-color: #546e7a; cursor: not-allowed; }
+        #result { margin-top: 15px; font-weight: bold; font-size: 14px; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2 id="user-title">Entrenador TCG</h2>
-        <p id="claim-info">Cargando datos...</p>
-        <button id="claim-btn" onclick="checkAndClaim()">🎁 Reclamar Puntos</button>
-        <p id="result-msg"></p>
-    </div>
-
-    <div id="video-modal">
-        <div class="spinner"></div>
-        <h3>📺 Reproduciendo Anuncio...</h3>
-        <p>Financiando el sorteo. Espera <span id="timer">5</span>s</p>
+        <h2>🎁 Recompensa TCG</h2>
+        <p>Mira un breve anuncio para ganar entre 10 y 100 puntos para el sorteo.</p>
+        <button id="claim-btn" onclick="handleClaim()">🎬 Ver Anuncio y Ganar</button>
+        <div id="result"></div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.ready();
         tg.expand();
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const claims = parseInt(urlParams.get('claims') || '0', 10);
-        const secureInitData = tg.initData;
+        // Inicializar controlador de Adsgram con tu Block ID
+        const AdController = window.Adsgram ? window.Adsgram.init({ blockId: "45566" }) : null;
 
-        const userTitle = document.getElementById('user-title');
-        const claimInfo = document.getElementById('claim-info');
-        const claimBtn = document.getElementById('claim-btn');
-        const resultMsg = document.getElementById('result-msg');
+        // IMPORTANTE: Sustituye esta URL por la dirección real de tu backend en Render
+        const BACKEND_URL = "https://TU-BACKEND-RENDER.onrender.com/api/claim";
 
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            userTitle.innerText = `¡Hola, ${tg.initDataUnsafe.user.first_name}!`;
-        }
+        async function handleClaim() {
+            const btn = document.getElementById('claim-btn');
+            const resultDiv = document.getElementById('result');
+            
+            btn.disabled = true;
+            resultDiv.style.color = "#ffffff";
+            resultDiv.innerText = "Cargando anuncio...";
 
-        if (claims === 0) {
-            claimInfo.innerText = "✨ Tirada 1 de hoy: ¡GRATIS! (Sin anuncio)";
-        } else if (claims < 5) {
-            claimInfo.innerText = `📺 Tirada ${claims + 1} de 5: Requiere ver anuncio.`;
-        } else {
-            claimInfo.innerText = "⚠️ Has agotado tus 5 tiradas de hoy. ¡Vuelve mañana!";
-            claimBtn.disabled = true;
-        }
-
-        function checkAndClaim() {
-            claimBtn.disabled = true;
-            if (claims === 0) {
-                sendClaimRequest();
-            } else {
-                showVideoAd(() => {
-                    sendClaimRequest();
-                });
+            if (!AdController) {
+                resultDiv.style.color = "#ff5252";
+                resultDiv.innerText = "Error al conectar con la red de anuncios.";
+                btn.disabled = false;
+                return;
             }
-        }
 
-        function sendClaimRequest() {
-            resultMsg.innerText = "Reclamando puntos...";
-            
-            fetch('https://tcg-je3j.onrender.com/api/claim', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ initData: secureInitData })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    resultMsg.innerText = `🎉 ¡Ganaste ${data.earned} puntos!\nPulsa 'Actualizar Saldo' en el bot.`;
-                    if (tg.HapticFeedback) {
-                        tg.HapticFeedback.notificationOccurred('success');
-                    }
-                    setTimeout(() => tg.close(), 3500);
+            try {
+                // Mostrar anuncio recompensado
+                await AdController.show();
+                
+                // Si vio el video completo, enviamos la solicitud al backend
+                resultDiv.innerText = "¡Anuncio completado! Entregando puntos...";
+                
+                const response = await fetch(BACKEND_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ initData: tg.initData })
+                });
+
+                const data = await response.json();
+
+                if (data.status === "success") {
+                    resultDiv.style.color = "#69f0ae";
+                    resultDiv.innerText = `🎉 ¡Ganaste ${data.earned} pts! Total: ${data.new_points} pts.`;
+                    setTimeout(() => tg.close(), 2500);
+                } else if (data.status === "limit_reached") {
+                    resultDiv.style.color = "#ffd740";
+                    resultDiv.innerText = "⚠️ Ya alcanzaste el límite de 5 tiradas de hoy.";
                 } else {
-                    resultMsg.innerText = data.message;
+                    resultDiv.style.color = "#ff5252";
+                    resultDiv.innerText = "❌ Error: " + (data.message || "No se pudo procesar.");
+                    btn.disabled = false;
                 }
-            })
-            .catch(error => {
-                resultMsg.innerText = "Error al conectar con el servidor.";
-                claimBtn.disabled = false;
-            });
-        }
 
-        function showVideoAd(callback) {
-            const modal = document.getElementById('video-modal');
-            const timerEl = document.getElementById('timer');
-            let timeLeft = 5;
-            
-            modal.style.display = 'flex';
-            timerEl.innerText = timeLeft;
-
-            const interval = setInterval(() => {
-                timeLeft--;
-                timerEl.innerText = timeLeft;
-                if (timeLeft <= 0) {
-                    clearInterval(interval);
-                    modal.style.display = 'none';
-                    callback();
-                }
-            }, 1000);
+            } catch (error) {
+                // Si el usuario saltó/cerró el vídeo antes de tiempo
+                resultDiv.style.color = "#ff5252";
+                resultDiv.innerText = "⚠️ Debes ver el anuncio completo para recibir los puntos.";
+                btn.disabled = false;
+            }
         }
     </script>
 </body>
