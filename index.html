@@ -63,12 +63,16 @@
         const BACKEND_URL = "https://tcg-je3j.onrender.com/api/claim";
         let AdController = null;
 
-        // Función para obtener/inicializar Adsgram bajo demanda
-        function getAdController() {
-            if (!AdController && window.Adsgram) {
-                AdController = window.Adsgram.init({ blockId: "45566" });
-            }
-            return AdController;
+        // Función para forzar la carga de Adsgram si falla la inicial
+        function loadAdsgramScript() {
+            return new Promise((resolve, reject) => {
+                if (window.Adsgram) return resolve(true);
+                const script = document.createElement('script');
+                script.src = "https://adsgram.ai/js/adsgram-ad.js?v=" + Date.now();
+                script.onload = () => resolve(true);
+                script.onerror = () => reject(false);
+                document.head.appendChild(script);
+            });
         }
 
         async function handleClaim() {
@@ -79,20 +83,37 @@
             resultDiv.style.color = "#ffffff";
             resultDiv.innerText = "Cargando anuncio...";
 
-            const controller = getAdController();
+            // Intentar cargar el script si la variable no existe
+            if (!window.Adsgram) {
+                try {
+                    await loadAdsgramScript();
+                } catch (e) {
+                    console.error("Error al inyectar Adsgram", e);
+                }
+            }
 
-            if (!controller) {
+            if (!window.Adsgram) {
                 resultDiv.style.color = "#ff5252";
-                resultDiv.innerText = "Error al conectar con Adsgram. Asegúrate de estar en el móvil y sin AdBlock.";
+                resultDiv.innerText = "Error: El servidor de anuncios no responde en este momento.";
                 btn.disabled = false;
                 return;
             }
 
+            if (!AdController) {
+                try {
+                    AdController = window.Adsgram.init({ blockId: "45566" });
+                } catch (err) {
+                    resultDiv.style.color = "#ff5252";
+                    resultDiv.innerText = "Error al inicializar Adsgram.";
+                    btn.disabled = false;
+                    return;
+                }
+            }
+
             try {
-                // Mostrar anuncio recompensado
-                await controller.show();
+                // Mostrar anuncio
+                await AdController.show();
                 
-                // Si vio el video completo, enviamos la solicitud al backend
                 resultDiv.innerText = "¡Anuncio completado! Entregando puntos...";
                 
                 const response = await fetch(BACKEND_URL, {
@@ -117,7 +138,6 @@
                 }
 
             } catch (error) {
-                // Si el usuario saltó/cerró el vídeo antes de tiempo o fallo de red
                 resultDiv.style.color = "#ff5252";
                 resultDiv.innerText = "⚠️ Debes ver el anuncio completo para recibir los puntos.";
                 btn.disabled = false;
