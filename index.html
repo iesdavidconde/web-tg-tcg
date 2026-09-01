@@ -6,8 +6,10 @@
     <title>TCG Rewards</title>
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Adsgram SDK -->
-    <script src="https://adsgram.ai/js/adsgram-ad.js"></script>
+    
+    <!-- Adsgram SDK Oficial (CORREGIDO) -->
+    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+    
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -61,19 +63,9 @@
         tg.expand();
 
         const BACKEND_URL = "https://tcg-je3j.onrender.com/api/claim";
+        
+        // Guardar el controlador globalmente
         let AdController = null;
-
-        // Función para forzar la carga de Adsgram si falla la inicial
-        function loadAdsgramScript() {
-            return new Promise((resolve, reject) => {
-                if (window.Adsgram) return resolve(true);
-                const script = document.createElement('script');
-                script.src = "https://adsgram.ai/js/adsgram-ad.js?v=" + Date.now();
-                script.onload = () => resolve(true);
-                script.onerror = () => reject(false);
-                document.head.appendChild(script);
-            });
-        }
 
         async function handleClaim() {
             const btn = document.getElementById('claim-btn');
@@ -83,39 +75,33 @@
             resultDiv.style.color = "#ffffff";
             resultDiv.innerText = "Cargando anuncio...";
 
-            // Intentar cargar el script si la variable no existe
-            if (!window.Adsgram) {
-                try {
-                    await loadAdsgramScript();
-                } catch (e) {
-                    console.error("Error al inyectar Adsgram", e);
-                }
-            }
-
+            // 1. Verificar si el script oficial cargó
             if (!window.Adsgram) {
                 resultDiv.style.color = "#ff5252";
-                resultDiv.innerText = "Error: El servidor de anuncios no responde en este momento.";
+                resultDiv.innerText = "No se pudo cargar el anuncio. Revisa tu conexión.";
                 btn.disabled = false;
                 return;
             }
 
+            // 2. Inicializar Adsgram solo la primera vez que se pulsa el botón
             if (!AdController) {
                 try {
                     AdController = window.Adsgram.init({ blockId: "45566" });
                 } catch (err) {
                     resultDiv.style.color = "#ff5252";
-                    resultDiv.innerText = "Error al inicializar Adsgram.";
+                    resultDiv.innerText = "Error al iniciar el bloque de anuncios.";
                     btn.disabled = false;
                     return;
                 }
             }
 
             try {
-                // Mostrar anuncio
+                // 3. Mostrar el anuncio
                 await AdController.show();
                 
                 resultDiv.innerText = "¡Anuncio completado! Entregando puntos...";
                 
+                // 4. Conectar con el backend en Render
                 const response = await fetch(BACKEND_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -138,6 +124,7 @@
                 }
 
             } catch (error) {
+                // Si el usuario cierra el vídeo a la mitad
                 resultDiv.style.color = "#ff5252";
                 resultDiv.innerText = "⚠️ Debes ver el anuncio completo para recibir los puntos.";
                 btn.disabled = false;
