@@ -60,11 +60,16 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // Inicializar controlador de Adsgram con tu Block ID
-        const AdController = window.Adsgram ? window.Adsgram.init({ blockId: "45566" }) : null;
-
-        // IMPORTANTE: Sustituye esta URL por la dirección real de tu backend en Render
         const BACKEND_URL = "https://tcg-je3j.onrender.com/api/claim";
+        let AdController = null;
+
+        // Función para obtener/inicializar Adsgram bajo demanda
+        function getAdController() {
+            if (!AdController && window.Adsgram) {
+                AdController = window.Adsgram.init({ blockId: "45566" });
+            }
+            return AdController;
+        }
 
         async function handleClaim() {
             const btn = document.getElementById('claim-btn');
@@ -74,16 +79,18 @@
             resultDiv.style.color = "#ffffff";
             resultDiv.innerText = "Cargando anuncio...";
 
-            if (!AdController) {
+            const controller = getAdController();
+
+            if (!controller) {
                 resultDiv.style.color = "#ff5252";
-                resultDiv.innerText = "Error al conectar con la red de anuncios.";
+                resultDiv.innerText = "Error al conectar con Adsgram. Asegúrate de estar en el móvil y sin AdBlock.";
                 btn.disabled = false;
                 return;
             }
 
             try {
                 // Mostrar anuncio recompensado
-                await AdController.show();
+                await controller.show();
                 
                 // Si vio el video completo, enviamos la solicitud al backend
                 resultDiv.innerText = "¡Anuncio completado! Entregando puntos...";
@@ -110,7 +117,7 @@
                 }
 
             } catch (error) {
-                // Si el usuario saltó/cerró el vídeo antes de tiempo
+                // Si el usuario saltó/cerró el vídeo antes de tiempo o fallo de red
                 resultDiv.style.color = "#ff5252";
                 resultDiv.innerText = "⚠️ Debes ver el anuncio completo para recibir los puntos.";
                 btn.disabled = false;
