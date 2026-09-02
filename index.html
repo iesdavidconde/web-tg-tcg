@@ -89,6 +89,13 @@
             const btn = document.getElementById('claim-btn');
             const resultDiv = document.getElementById('result');
             
+            // ESCUDO: Comprobar si Telegram ha cargado los datos ANTES de hacer nada
+            if (!tg.initData) {
+                resultDiv.style.color = "#ff5252";
+                resultDiv.innerText = "Error local: Telegram no ha cargado tu sesión. Cierra la Mini App y ábrela usando SOLO el botón del menú.";
+                return;
+            }
+            
             btn.disabled = true;
             resultDiv.style.color = "#ffffff";
             
