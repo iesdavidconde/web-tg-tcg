@@ -53,20 +53,37 @@
 <body>
     <div class="card">
         <h2>🎁 Recompensa TCG</h2>
-        <p>Mira un breve anuncio para ganar entre 10 y 100 puntos para el sorteo.</p>
-        <button id="claim-btn" onclick="handleClaim()">🎬 Ver Anuncio y Ganar</button>
+        <p id="card-desc">Cargando...</p>
+        <button id="claim-btn" onclick="handleClaim()">Cargando...</button>
         <div id="result"></div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
+        tg.ready();
 
-        // ⚠️ IMPORTANTE: REEMPLAZA ESTE ENLACE POR TU URL GENERADA EN RAILWAY
         const BACKEND_URL = "https://tcg-production-4524.up.railway.app/api/claim";
         
-        // Guardar el controlador globalmente
+        // Lee el número de tiradas desde la URL que envía el bot Python
+        const urlParams = new URLSearchParams(window.location.search);
+        const claims = parseInt(urlParams.get('claims') || '0', 10);
+        
         let AdController = null;
+
+        // Adapta la interfaz dependiendo de si es la tirada gratuita
+        window.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('claim-btn');
+            const desc = document.getElementById('card-desc');
+
+            if (claims === 0) {
+                desc.innerText = "¡Tu primera tirada de hoy es GRATIS! Gana entre 10 y 100 puntos.";
+                btn.innerText = "🎁 Reclamar Gratis";
+            } else {
+                desc.innerText = "Mira un breve anuncio para ganar puntos extra para el sorteo.";
+                btn.innerText = "🎬 Ver Anuncio y Ganar";
+            }
+        });
 
         async function handleClaim() {
             const btn = document.getElementById('claim-btn');
@@ -74,35 +91,42 @@
             
             btn.disabled = true;
             resultDiv.style.color = "#ffffff";
-            resultDiv.innerText = "Cargando anuncio...";
+            
+            if (claims === 0) {
+                resultDiv.innerText = "Reclamando tu tirada gratis...";
+            } else {
+                resultDiv.innerText = "Cargando anuncio...";
 
-            // 1. Verificar si el script oficial cargó
-            if (!window.Adsgram) {
-                resultDiv.style.color = "#ff5252";
-                resultDiv.innerText = "No se pudo cargar el anuncio. Revisa tu conexión.";
-                btn.disabled = false;
-                return;
-            }
-
-            // 2. Inicializar Adsgram solo la primera vez que se pulsa el botón
-            if (!AdController) {
-                try {
-                    AdController = window.Adsgram.init({ blockId: "45566" });
-                } catch (err) {
+                if (!window.Adsgram) {
                     resultDiv.style.color = "#ff5252";
-                    resultDiv.innerText = "Error al iniciar el bloque de anuncios.";
+                    resultDiv.innerText = "No se pudo cargar el anuncio.";
+                    btn.disabled = false;
+                    return;
+                }
+
+                if (!AdController) {
+                    try {
+                        AdController = window.Adsgram.init({ blockId: "45566" });
+                    } catch (err) {
+                        resultDiv.style.color = "#ff5252";
+                        resultDiv.innerText = "Error al iniciar el anuncio.";
+                        btn.disabled = false;
+                        return;
+                    }
+                }
+
+                try {
+                    await AdController.show();
+                    resultDiv.innerText = "¡Anuncio completado! Entregando puntos...";
+                } catch (error) {
+                    resultDiv.style.color = "#ff5252";
+                    resultDiv.innerText = "⚠️ Debes ver el anuncio completo.";
                     btn.disabled = false;
                     return;
                 }
             }
 
             try {
-                // 3. Mostrar el anuncio
-                await AdController.show();
-                
-                resultDiv.innerText = "¡Anuncio completado! Entregando puntos...";
-                
-                // 4. Conectar con el backend en Railway
                 const response = await fetch(BACKEND_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -117,17 +141,15 @@
                     setTimeout(() => tg.close(), 2500);
                 } else if (data.status === "limit_reached") {
                     resultDiv.style.color = "#ffd740";
-                    resultDiv.innerText = "⚠️ Ya alcanzaste el límite de 5 tiradas de hoy.";
+                    resultDiv.innerText = "⚠️ Límite de 5 tiradas alcanzado hoy.";
                 } else {
                     resultDiv.style.color = "#ff5252";
-                    resultDiv.innerText = "❌ Error: " + (data.message || "No se pudo procesar.");
+                    resultDiv.innerText = "❌ Error: " + (data.message || "No procesado.");
                     btn.disabled = false;
                 }
-
             } catch (error) {
-                // Si el usuario cierra el vídeo a la mitad
                 resultDiv.style.color = "#ff5252";
-                resultDiv.innerText = "⚠️ Debes ver el anuncio completo para recibir los puntos.";
+                resultDiv.innerText = "❌ Error al conectar con el servidor.";
                 btn.disabled = false;
             }
         }
