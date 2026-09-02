@@ -7,7 +7,7 @@
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
-    <!-- Adsgram SDK Oficial (CORREGIDO) -->
+    <!-- Adsgram SDK Oficial -->
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     
     <style>
@@ -62,7 +62,8 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        const BACKEND_URL = "https://tcg-je3j.onrender.com/api/claim";
+        // ⚠️ IMPORTANTE: REEMPLAZA ESTE ENLACE POR TU URL GENERADA EN RAILWAY
+        const BACKEND_URL = "https://TU-DOMINIO-DE-RAILWAY.up.railway.app/api/claim";
         
         // Guardar el controlador globalmente
         let AdController = null;
@@ -101,7 +102,7 @@
                 
                 resultDiv.innerText = "¡Anuncio completado! Entregando puntos...";
                 
-                // 4. Conectar con el backend en Render
+                // 4. Conectar con el backend en Railway
                 const response = await fetch(BACKEND_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
